@@ -1,18 +1,17 @@
 /**
   ******************************************************************************
   * @file           : bluetooth.h
-  * @brief          : 蓝牙通信模块头文件
-  * @date           : 2026-06-16
+  * @brief          : 蓝牙通信模块头文件（简化版）
+  * @date           : 2026-06-18
   ******************************************************************************
   * @attention
   *
-  * HC-05/06 蓝牙模块
-  * USART1: PA9(TX), PA10(RX), 115200波特率
+  * JDY-31 蓝牙模块
+  * USART1: PA9(TX) → JDY-31 RXD, PA10(RX) ← JDY-31 TXD, 9600波特率
   *
-  * 通信协议:
-  *   帧头(2B) + 命令(1B) + 参数(1B) + 校验(1B)
-  *   帧头: 0xAA 0x55
-  *   校验: 帧头 XOR 命令 XOR 参数
+  * 协议：单字节ASCII字符
+  *   '0' = 停止    '1' = 前进    '2' = 后退
+  *   '3' = 左转    '4' = 右转    '5' = 加速    '6' = 减速
   *
   ******************************************************************************
   */
@@ -24,81 +23,35 @@
 extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/* Exported constants --------------------------------------------------------*/
+/* 命令定义（ASCII字符） */
+#define CMD_STOP        '0'
+#define CMD_FORWARD     '1'
+#define CMD_BACKWARD    '2'
+#define CMD_TURN_LEFT   '3'
+#define CMD_TURN_RIGHT  '4'
+#define CMD_SPEED_UP    '5'
+#define CMD_SPEED_DOWN  '6'
+#define CMD_BEEP        '7'
 
-/* 帧定义 */
-#define BT_FRAME_HEADER1    0xAA
-#define BT_FRAME_HEADER2    0x55
-#define BT_FRAME_SIZE       5       /* 帧总长度 */
+/* 导出变量 */
+extern volatile uint8_t bt_flag;       /* 蓝牙命令标志 */
+extern volatile uint8_t bt_cmd;        /* 蓝牙收到的命令 */
+extern volatile uint8_t bt_rx_count;   /* 接收计数器（调试用） */
+extern volatile uint8_t bt_debug;      /* 调试：显示匹配结果 */
 
-/* 命令定义 */
-#define CMD_FORWARD         0x01    /* 前进 */
-#define CMD_BACKWARD        0x02    /* 后退 */
-#define CMD_TURN_LEFT       0x03    /* 左转 */
-#define CMD_TURN_RIGHT      0x04    /* 右转 */
-#define CMD_STOP            0x05    /* 停止 */
-#define CMD_SPEED           0x06    /* 设置速度 */
-#define CMD_GET_STATUS      0x07    /* 获取状态 */
-#define CMD_BEEP            0x08    /* 蜂鸣器控制 */
+/* 回调函数类型定义 */
+typedef void (*BT_CallbackFunc)(uint8_t cmd, uint8_t param);
 
-/* 状态定义 */
-typedef enum {
-    BT_STATE_IDLE = 0,       /* 空闲 */
-    BT_STATE_HEADER1,        /* 等待帧头1 */
-    BT_STATE_HEADER2,        /* 等待帧头2 */
-    BT_STATE_CMD,            /* 等待命令 */
-    BT_STATE_PARAM,          /* 等待参数 */
-    BT_STATE_CHECK           /* 等待校验 */
-} BT_StateTypeDef;
-
-/* 命令回调函数类型 */
-typedef void (*BT_CmdCallback)(uint8_t cmd, uint8_t param);
-
-/* Exported functions prototypes ---------------------------------------------*/
-
-/**
-  * @brief  蓝牙模块初始化
-  * @retval None
-  */
+/* 函数声明 */
 void BT_Init(void);
-
-/**
-  * @brief  蓝牙接收处理（在主循环中调用）
-  * @retval None
-  */
-void BT_Process(void);
-
-/**
-  * @brief  注册命令回调函数
-  * @param  callback: 回调函数指针
-  * @retval None
-  */
-void BT_RegisterCallback(BT_CmdCallback callback);
-
-/**
-  * @brief  蓝牙发送数据
-  * @param  data: 数据指针
-  * @param  len: 数据长度
-  * @retval None
-  */
-void BT_SendData(uint8_t *data, uint16_t len);
-
-/**
-  * @brief  蓝牙发送状态回复
-  * @param  speed: 当前速度
-  * @param  dir: 当前方向
-  * @retval None
-  */
-void BT_SendStatus(uint8_t speed, uint8_t dir);
-
-/**
-  * @brief  获取当前速度设置
-  * @retval 速度值 (0-100)
-  */
+uint8_t BT_GetCmd(void);
+void BT_ClearCmd(void);
 uint8_t BT_GetSpeed(void);
+uint8_t BT_GetLastByte(void);  /* 获取最后收到的原始字节 */
+void BT_RegisterCallback(BT_CallbackFunc callback);  /* 注册蓝牙命令回调函数 */
+void BT_Process(void);  /* 蓝牙处理函数，在主循环中调用 */
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,24 @@
+# Keil MDK 用户特定文件
+*.uvguix.*
+*.uvoptx
+
+# Keil 编译输出
+*.lst
+*.o
+*.d
+*.crf
+*.htm
+*.lnp
+*.sct
+*.axf
+*.hex
+*.bin
+*.map
+lanyaxc/MDK-ARM/lanyaxc/
+
+# Keil 调试配置
+lanyaxc/MDK-ARM/DebugConfig/
+lanyaxc/MDK-ARM/RTE/
+
+# Claude 本地配置
+.claude/settings.local.json

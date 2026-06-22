@@ -139,6 +139,55 @@ void Car_TurnRight(uint16_t speed);
   */
 void Car_Stop(void);
 
+/* 4电机独立控制（2个L298N模块） */
+/**
+  * @brief  左前电机前进
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_FrontLeftForward(uint16_t speed);
+
+/**
+  * @brief  左前电机后退
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_FrontLeftBackward(uint16_t speed);
+
+/**
+  * @brief  左后电机前进
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_RearLeftForward(uint16_t speed);
+
+/**
+  * @brief  左后电机后退
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_RearLeftBackward(uint16_t speed);
+
+/**
+  * @brief  右前电机前进
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_FrontRightForward(uint16_t speed);
+
+/**
+  * @brief  右前电机后退
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_FrontRightBackward(uint16_t speed);
+
+/**
+  * @brief  右后电机前进
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_RearRightForward(uint16_t speed);
+
+/**
+  * @brief  右后电机后退
+  * @param  speed: 速度 (0 ~ MOTOR_PWM_MAX)
+  */
+void Motor_RearRightBackward(uint16_t speed);
+
 #ifdef __cplusplus
 }
 #endif
