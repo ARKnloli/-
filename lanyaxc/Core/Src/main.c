@@ -39,7 +39,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static uint8_t current_speed = 50;
+static uint16_t current_speed = 500;  /* 当前速度 (0-999)，初始50% */
 static uint8_t current_dir = 0;
 static uint8_t display_update = 1;
 /* USER CODE END PV */
@@ -164,10 +164,6 @@ void SystemClock_Config(void)
   */
 void BT_CommandCallback(uint8_t cmd, uint8_t param)
 {
-    uint8_t speed;
-    speed = BT_GetSpeed();
-    current_speed = speed * MOTOR_PWM_MAX / 100;
-
     switch (cmd) {
         case CMD_FORWARD:
             Car_Forward(current_speed);
@@ -195,12 +191,18 @@ void BT_CommandCallback(uint8_t cmd, uint8_t param)
             display_update = 1;
             Buzzer_Beep(100);
             break;
+        case CMD_SPEED_UP:
+            current_speed += 100;
+            if (current_speed > MOTOR_PWM_MAX) current_speed = MOTOR_PWM_MAX;
+            display_update = 1;
+            break;
+        case CMD_SPEED_DOWN:
+            if (current_speed >= 100) current_speed -= 100;
+            else current_speed = 0;
+            display_update = 1;
+            break;
         case CMD_BEEP:
-            if (param == 0) {
-                Buzzer_Off();
-            } else {
-                Buzzer_Beep(200);
-            }
+            Buzzer_Beep(200);
             break;
         default:
             break;
