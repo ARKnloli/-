@@ -94,15 +94,15 @@ void Motor_Set(Motor_IdTypeDef motor, Motor_DirTypeDef dir, uint16_t speed)
         pin_fwd = IN1_Pin;      /* PA4 - IN1 */
         pin_bwd = IN2_Pin;      /* PA5 - IN2 */
 
-        /* 设置ENA为高电平（全速使能） */
-        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, MOTOR_PWM_MAX);
+        /* 设置ENA为传入的速度值 */
+        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed);
     } else {
         gpio_port = IN3_GPIO_Port;
         pin_fwd = IN3_Pin;      /* PA6 - IN3 */
         pin_bwd = IN4_Pin;      /* PA7 - IN4 */
 
-        /* 设置ENB为高电平（全速使能） */
-        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, MOTOR_PWM_MAX);
+        /* 设置ENB为传入的速度值 */
+        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, speed);
     }
 
     /* 设置方向 */
