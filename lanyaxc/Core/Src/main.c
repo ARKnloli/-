@@ -39,7 +39,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static uint16_t current_speed = 500;  /* 当前速度 (0-999)，初始50% */
+static uint16_t current_speed = 999;  /* 当前速度 (0-999)，初始全速 */
 static uint8_t current_dir = 0;
 static uint8_t display_update = 1;
 /* USER CODE END PV */
