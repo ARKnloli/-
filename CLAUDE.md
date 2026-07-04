@@ -2,48 +2,150 @@
 
 ## 项目概述
 
-STM32F103C8T6 蓝牙小车，支持蓝牙遥控、OLED显示、蜂鸣器提示。
+STM32F103C8T6 蓝牙小车，支持蓝牙遥控、OLED中文显示、蜂鸣器提示、PWM调速。
+
+## 文件结构
+
+```
+stmf132/
+├── CLAUDE.md              # 本文件：项目指引
+├── README.md              # 项目说明
+├── devlog/                # 开发日志
+│   ├── README.md          # 日志说明
+│   ├── TEMPLATE.md        # 日志模板
+│   └── 2026/              # 按年份组织
+│       ├── 06-16.md       # 初始开发
+│       ├── 06-18.md       # 蓝牙和蜂鸣器调试
+│       ├── 06-19.md       # 电机控制开发
+│       └── 07-03.md       # OLED中文显示和PWM调速
+├── docs/                  # 项目文档
+│   ├── requirements.md    # 需求文档
+│   ├── tech-spec.md       # 技术规范
+│   ├── design-spec.md     # 设计规范
+│   ├── hardware-interface.md  # 硬件接口
+│   ├── execution-plan.md  # 执行计划
+│   ├── development-guide.md   # 开发指南
+│   ├── oled-chinese-plan.md   # OLED中文显示方案
+│   ├── 代表性程序代码.md    # 代表性程序代码
+│   ├── 系统硬件连接图.md    # 系统硬件连接图
+│   └── *.png              # 流程图和框架图
+├── lanyaxc/               # 源代码
+│   └── Core/
+│       ├── Inc/           # 头文件
+│       │   ├── main.h
+│       │   ├── motor_control.h
+│       │   ├── bluetooth.h
+│       │   ├── buzzer.h
+│       │   ├── oled.h
+│       │   └── chinese_font.h
+│       └── Src/           # 源文件
+│           ├── main.c
+│           ├── motor_control.c
+│           ├── bluetooth.c
+│           ├── buzzer.c
+│           ├── oled.c
+│           └── chinese_font.c
+├── ziliao/                # 参考资料
+│   └── bluetooth-car-reference.md
+└── *.docx                 # 答辩文档
+    ├── 蓝牙小车答辩问题与完整解答v2.docx  # ⭐ 推荐
+    ├── GPIO输出模式详解.docx
+    └── ...
+```
+
+## 工作说明
+
+### 开发原则
+1. **稳定优先**：每次只修改一个功能，修改后立即测试
+2. **分步实施**：将大任务拆分为小步骤，每步完成后确认正常
+3. **文档同步**：代码修改同步更新文档，记录问题和解决方案
+
+### 日志规范
+- 每天在 `devlog/2026/` 下创建日志文件（格式：MM-DD.md）
+- 记录：已完成、进行中、待办事项、问题记录
+- 使用模板：`devlog/TEMPLATE.md`
+
+### 文档规范
+- 需求文档：`docs/requirements.md`
+- 技术规范：`docs/tech-spec.md`
+- 设计规范：`docs/design-spec.md`
+- 开发指南：`docs/development-guide.md`
+
+### 代码规范
+- 命名：变量小写下划线，函数大驼峰，宏全大写
+- 注释：使用Doxygen格式
+- 结构：Includes → Private defines → Private variables → Private functions → Exported functions
+
+## 当前开发重点
+
+### 项目状态：基本完成 ✅
+
+所有核心功能已实现：
+1. ✅ 蓝牙通信正常
+2. ✅ OLED中文显示正常
+3. ✅ 电机控制正常（4个电机）
+4. ✅ 蜂鸣器提示音正常
+5. ✅ PWM调速正常
+6. ✅ 速度调节正常
+
+### 待办事项
+- [ ] 更换坏掉的左后电机
+- [ ] 完整功能测试
+- [ ] 答辩准备
 
 ## 硬件配置
 
-| 模块 | 引脚 | 说明 |
-|------|------|------|
-| L298N模块1 ENA | PA0 (TIM2_CH1) | 左侧电机速度(PWM) |
-| L298N模块1 IN1 | PA4 | 左侧电机方向 |
-| L298N模块1 IN2 | PA5 | 左侧电机方向 |
-| L298N模块2 ENB | PA1 (TIM2_CH2) | 右侧电机速度(PWM) |
-| L298N模块2 IN3 | PA6 | 右侧电机方向 |
-| L298N模块2 IN4 | PA7 | 右侧电机方向 |
-| 蜂鸣器 | PB0 | 低电平触发 |
-| OLED SCL | PB6 | I2C时钟 |
-| OLED SDA | PB7 | I2C数据 |
-| 蓝牙 TX | PA9(TX) → JDY-31 RXD | STM32发送→蓝牙接收 |
-| 蓝牙 RX | PA10(RX) ← JDY-31 TXD | STM32接收←蓝牙发送 |
+### 完整引脚分配表
 
-### 4电机连接方案（2个L298N模块）
+| STM32引脚 | 功能 | GPIO模式 | 连接模块 | 说明 |
+|-----------|------|----------|----------|------|
+| PA0 | TIM2_CH1 | 复用推挽输出 | L298N左侧ENA | 左侧电机PWM调速 |
+| PA1 | TIM2_CH2 | 复用推挽输出 | L298N右侧ENA | 右侧电机PWM调速 |
+| PA4 | GPIO | 推挽输出 | L298N左侧IN1 | 左通道A方向 |
+| PA5 | GPIO | 推挽输出 | L298N左侧IN2 | 左通道A方向 |
+| PA6 | GPIO | 推挽输出 | L298N右侧IN1 | 右通道A方向 |
+| PA7 | GPIO | 推挽输出 | L298N右侧IN2 | 右通道A方向 |
+| PA9 | USART1_TX | 复用推挽输出 | 蓝牙RXD | STM32发送→蓝牙接收 |
+| PA10 | USART1_RX | 浮空输入 | 蓝牙TXD | 蓝牙发送→STM32接收 |
+| PA15 | GPIO | 推挽输出 | L298N右侧IN4 | 右通道B方向（备用） |
+| PB0 | GPIO | 推挽输出 | 蜂鸣器 | 低电平触发 |
+| PB1 | GPIO | 推挽输出 | L298N左侧ENB | 左侧通道B使能（备用） |
+| PB2 | GPIO | 推挽输出 | L298N右侧ENB | 右侧通道B使能（备用） |
+| PB6 | I2C1_SCL | 复用开漏输出 | OLED SCL | I2C时钟线 |
+| PB7 | I2C1_SDA | 复用开漏输出 | OLED SDA | I2C数据线 |
+| PA13 | SWDIO | - | ST-Link | 调试数据线 |
+| PA14 | SWCLK | - | ST-Link | 调试时钟线 |
+
+### 4电机连接方案（2个L298N模块，双通道）
 
 ```
 模块1（左侧）：
   ENA ← PA0 (TIM2_CH1, 左侧速度PWM)
-  IN1 ← PA4
-  IN2 ← PA5
-  OUT1/OUT2 → 左前电机
-  OUT3/OUT4 → 左后电机
+  ENB ← 3.3V（跳线帽或直接接，使能通道B）
+  IN1 ← PA4（通道A方向）
+  IN2 ← PA5（通道A方向）
+  OUT1/OUT2 → 左前电机（通道A）
+  OUT3/OUT4 → 左后电机（通道B）
 
 模块2（右侧）：
   ENA ← PA1 (TIM2_CH2, 右侧速度PWM)
-  IN1 ← PA6
-  IN2 ← PA7
-  OUT1/OUT2 → 右前电机（注意：OUT1接负极，OUT2接正极，需要交换接线）
-  OUT3/OUT4 → 右后电机
-
-同侧两个电机并联控制，同步转动
+  ENB ← 3.3V（跳线帽或直接接，使能通道B）
+  IN1 ← PA6（通道A方向）
+  IN2 ← PA7（通道A方向）
+  OUT1/OUT2 → 右前电机（通道A，注意交换接线）
+  OUT3/OUT4 → 右后电机（通道B）
 
 右前电机接线特殊说明：
 由于左右电机安装方向是镜像的，右前电机需要交换接线：
   OUT1 → 右前电机 -（负极）
   OUT2 → 右前电机 +（正极）
 这样发送'1'时，所有轮子都会向前转。
+
+ENB使能说明：
+• ENB需要接高电平才能使能通道B
+• 可以用跳线帽连接到5V
+• 也可以直接接3.3V
+• 如果ENB悬空，通道B不工作，OUT3/OUT4没有输出
 ```
 
 ## 开发日志
@@ -87,32 +189,49 @@ STM32F103C8T6 蓝牙小车，支持蓝牙遥控、OLED显示、蜂鸣器提示�
 
 ### 蓝牙模块（JDY-31）
 ```
-STM32 PA9(TX)  → JDY-31 RXD
-STM32 PA10(RX) ← JDY-31 TXD
-JDY-31 VCC     → 3.3V
+STM32 PA9(TX)  → JDY-31 RXD    （复用推挽输出）
+STM32 PA10(RX) ← JDY-31 TXD    （浮空输入）
+JDY-31 VCC     → 3.3V          （⚠️ 不能接5V！）
 JDY-31 GND     → GND
+```
+
+### OLED显示模块（I2C通信）
+```
+STM32 PB6(SCL) → OLED SCL      （复用开漏输出）
+STM32 PB7(SDA) → OLED SDA      （复用开漏输出）
+OLED VCC       → 3.3V
+OLED GND       → GND
 ```
 
 ### 电机驱动（2个L298N模块，4电机）
 ```
 模块1（左侧）：
-  ENA ← PA0 (TIM2_CH1, 左侧速度PWM)
-  IN1 ← PA4
-  IN2 ← PA5
+  ENA ← PA0 (TIM2_CH1, 左侧速度PWM，复用推挽输出)
+  ENB ← 3.3V（使能通道B）
+  IN1 ← PA4（推挽输出）
+  IN2 ← PA5（推挽输出）
   OUT1/OUT2 → 左前电机
   OUT3/OUT4 → 左后电机
 
 模块2（右侧）：
-  ENA ← PA1 (TIM2_CH2, 右侧速度PWM)
-  IN1 ← PA6
-  IN2 ← PA7
-  OUT1/OUT2 → 右前电机
+  ENA ← PA1 (TIM2_CH2, 右侧速度PWM，复用推挽输出)
+  ENB ← 3.3V（使能通道B）
+  IN1 ← PA6（推挽输出）
+  IN2 ← PA7（推挽输出）
+  OUT1/OUT2 → 右前电机（交换接线）
   OUT3/OUT4 → 右后电机
 
 电源：
-  电池+(6V) → 两个模块的12V
+  电池+(9V) → 两个模块的12V
   电池-(GND) → 两个模块的GND → STM32 GND（共地）
   模块1 5V(跳线帽在) → STM32 5V
+```
+
+### 蜂鸣器
+```
+STM32 PB0 → 蜂鸣器I/O         （推挽输出，低电平触发）
+蜂鸣器 VCC → 3.3V或5V
+蜂鸣器 GND → GND
 ```
 
 ## 电源电容
@@ -122,6 +241,70 @@ JDY-31 GND     → GND
 - 接法：电容正极接电池+，负极接GND，靠近L298N电源输入端
 - 注意：电解电容有极性，接反会爆炸
 
+## GPIO输出模式说明
+
+### 推挽输出（Push-Pull）
+- 可以主动输出高电平和低电平
+- 驱动能力强，不需要外部上拉电阻
+- 应用：LED驱动、蜂鸣器驱动、电机控制、UART TX
+
+### 开漏输出（Open-Drain）
+- 只能主动输出低电平
+- 输出高电平需要外部上拉电阻
+- 可以实现"线与"功能
+- 应用：I2C通信（SCL/SDA）
+
+### 复用推挽/开漏输出
+- 由外设（UART/SPI/I2C/PWM）控制
+- 复用推挽：UART TX、PWM输出
+- 复用开漏：I2C SCL/SDA
+
+### 本项目GPIO配置
+- 电机控制引脚（PA4/PA5/PA6/PA7）：推挽输出
+- 蜂鸣器引脚（PB0）：推挽输出
+- UART TX（PA9）：复用推挽输出
+- UART RX（PA10）：浮空输入
+- I2C SCL/SDA（PB6/PB7）：复用开漏输出
+- PWM输出（PA0/PA1）：复用推挽输出
+
+## 已知问题
+
+### 问题1：蓝牙通信不工作（2026-06-18）
+- **现象**：APP发送HEX数据，OLED和蜂鸣器无反应
+- **原因**：蓝牙TX/RX接线接反（PA9应接JDY-31 RXD，PA10应接JDY-31 TXD）
+- **状态**：✅ 已解决
+
+### 问题2：蜂鸣器不响（2026-06-18）
+- **现象**：代码中调用Buzzer_Beep()但蜂鸣器无反应
+- **原因**：面包板接触不良
+- **状态**：✅ 已解决
+
+### 问题3：蜂鸣器开机一直响（2026-07-03）
+- **现象**：开机后蜂鸣器一直响
+- **原因**：gpio.c初始化时PB0设为低电平（GPIO_PIN_RESET）
+- **解决**：改为GPIO_PIN_SET（高电平）
+- **状态**：✅ 已解决
+
+### 问题4：OLED中文显示乱码（2026-07-03）
+- **现象**：中文字符显示为乱码
+- **原因**：字库数据格式不正确
+- **解决**：使用取模软件生成正确字库，并进行行列式→页列式格式转换
+- **状态**：✅ 已解决
+
+### 问题5：电机只有前轮转（2026-07-03）
+- **现象**：发送前进指令，只有前轮转，后轮不转
+- **原因**：L298N的ENB没有接高电平，通道B不工作
+- **解决**：ENB接3.3V或使用跳线帽
+- **状态**：✅ 已解决
+
 ## 参考资料
 
 - 参考项目：`ziliao/bluetooth-car-reference.md`
+- 开发指南：`docs/development-guide.md`
+- 硬件接口：`docs/hardware-interface.md`
+
+## 答辩文档
+
+- **推荐**：`蓝牙小车答辩问题与完整解答v2.docx`（包含GPIO输出模式详解）
+- GPIO专题：`GPIO输出模式详解.docx`
+- 其他版本：`蓝牙小车答辩问题与最终解答.docx`
