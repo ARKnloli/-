@@ -84,6 +84,48 @@ void Buzzer_Success(void);
   */
 void Buzzer_Error(void);
 
+/**
+  * @brief  前进提示音：两声短促（嘟-嘟）
+  * @retval None
+  */
+void Buzzer_Forward(void);
+
+/**
+  * @brief  后退提示音：一声长响（嘟——）
+  * @retval None
+  */
+void Buzzer_Backward(void);
+
+/**
+  * @brief  左转提示音：一声短促（嘟）
+  * @retval None
+  */
+void Buzzer_TurnLeft(void);
+
+/**
+  * @brief  右转提示音：两声快速（嘟嘟）
+  * @retval None
+  */
+void Buzzer_TurnRight(void);
+
+/**
+  * @brief  加速提示音：三声渐快（嘟嘟嘟）
+  * @retval None
+  */
+void Buzzer_SpeedUp(void);
+
+/**
+  * @brief  减速提示音：一声低沉（嘟——）
+  * @retval None
+  */
+void Buzzer_SpeedDown(void);
+
+/**
+  * @brief  播放音乐：小星星
+  * @retval None
+  */
+void Buzzer_PlayMusic(void);
+
 #ifdef __cplusplus
 }
 #endif

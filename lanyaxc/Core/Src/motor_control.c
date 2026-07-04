@@ -8,30 +8,33 @@
   * @attention
   *
   * L298N电机驱动控制模块（2个模块，4个电机）
+  * 每个模块使用双通道（通道A+通道B），确保4个电机同步转动
   *
   * 接线说明：
   *   模块1（左侧）：
-  *     ENA ← PA0 (TIM2_CH1)
-  *     IN1 ← PA4
-  *     IN2 ← PA5
-  *     OUT1/OUT2 → 左前电机
-  *     OUT3/OUT4 → 左后电机
+  *     ENA ← PA0 (TIM2_CH1, PWM调速)
+  *     ENB ← PB1 (使能通道B)
+  *     IN1 ← PA4（通道A方向）
+  *     IN2 ← PA5（通道A方向）
+  *     IN3 ← PA2（通道B方向）
+  *     IN4 ← PA3（通道B方向）
+  *     OUT1/OUT2 → 左前电机（通道A）
+  *     OUT3/OUT4 → 左后电机（通道B）
   *
   *   模块2（右侧）：
-  *     ENA ← PA1 (TIM2_CH2)
-  *     IN1 ← PA6
-  *     IN2 ← PA7
-  *     OUT1/OUT2 → 右前电机（注意：需要交换接线以匹配方向）
-  *     OUT3/OUT4 → 右后电机
-  *
-  *   右前电机接线说明：
-  *     由于左右电机安装方向是镜像的，右前电机需要交换接线：
-  *     OUT1 → 右前电机 -（负极）
-  *     OUT2 → 右前电机 +（正极）
+  *     ENA ← PA1 (TIM2_CH2, PWM调速)
+  *     ENB ← PB2 (使能通道B)
+  *     IN1 ← PA6（通道A方向）
+  *     IN2 ← PA7（通道A方向）
+  *     IN3 ← PA8（通道B方向）
+  *     IN4 ← PA15（通道B方向）
+  *     OUT1/OUT2 → 右前电机（通道A）
+  *     OUT3/OUT4 → 右后电机（通道B）
   *
   * 控制逻辑：
-  *   左电机: IN1=1,IN2=0 → 正转（向前）| IN1=0,IN2=1 → 反转（向后）
-  *   右电机: IN1=1,IN2=0 → 正转（向后，因为接线交换了）| IN1=0,IN2=1 → 反转（向前）
+  *   左电机: IN1=1,IN2=0,IN3=1,IN4=0 → 正转 | IN1=0,IN2=1,IN3=0,IN4=1 → 反转
+  *   右电机: IN1=1,IN2=0,IN3=1,IN4=0 → 正转 | IN1=0,IN2=1,IN3=0,IN4=1 → 反转
+  *   ENB=HIGH 使能通道B
   *
   ******************************************************************************
   */
@@ -64,11 +67,19 @@ void Motor_Init(void)
     __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
     __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
 
-    /* 设置方向引脚为停止状态 */
-    HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_RESET);
+    /* ENB使能：PB1=HIGH, PB2=HIGH（使能通道B） */
+    HAL_GPIO_WritePin(ENB1_GPIO_Port, ENB1_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(ENB2_GPIO_Port, ENB2_Pin, GPIO_PIN_SET);
+
+    /* 设置方向引脚为停止状态（通道A+通道B） */
+    HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_RESET);    // 左通道A
     HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN1B_GPIO_Port, IN1B_Pin, GPIO_PIN_RESET);  // 左通道B
+    HAL_GPIO_WritePin(IN2B_GPIO_Port, IN2B_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, GPIO_PIN_RESET);    // 右通道A
     HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN3B_GPIO_Port, IN3B_Pin, GPIO_PIN_RESET);  // 右通道B
+    HAL_GPIO_WritePin(IN4B_GPIO_Port, IN4B_Pin, GPIO_PIN_RESET);
 
     /* 记录当前速度 */
     current_left_speed = 0;
@@ -76,55 +87,68 @@ void Motor_Init(void)
 }
 
 /**
-  * @brief  设置单个电机速度和方向
+  * @brief  设置单个电机速度和方向（同时控制通道A和通道B）
   */
 void Motor_Set(Motor_IdTypeDef motor, Motor_DirTypeDef dir, uint16_t speed)
 {
-    GPIO_TypeDef *gpio_port;
-    uint16_t pin_fwd, pin_bwd;
-
     /* 限制速度范围 */
     if (speed > MOTOR_PWM_MAX) {
         speed = MOTOR_PWM_MAX;
     }
 
-    /* 选择电机对应的引脚 */
-    if (motor == MOTOR_LEFT) {
-        gpio_port = IN1_GPIO_Port;
-        pin_fwd = IN1_Pin;      /* PA4 - IN1 */
-        pin_bwd = IN2_Pin;      /* PA5 - IN2 */
-
-        /* 设置ENA为传入的速度值 */
-        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed);
-    } else {
-        gpio_port = IN3_GPIO_Port;
-        pin_fwd = IN3_Pin;      /* PA6 - IN3 */
-        pin_bwd = IN4_Pin;      /* PA7 - IN4 */
-
-        /* 设置ENB为传入的速度值 */
-        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, speed);
-    }
-
     /* 设置方向 */
     switch (dir) {
         case MOTOR_DIR_FORWARD:
-            HAL_GPIO_WritePin(gpio_port, pin_fwd, GPIO_PIN_SET);
-            HAL_GPIO_WritePin(gpio_port, pin_bwd, GPIO_PIN_RESET);
+            if (motor == MOTOR_LEFT) {
+                /* 左电机正转：通道A+通道B */
+                HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN1B_GPIO_Port, IN1B_Pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(IN2B_GPIO_Port, IN2B_Pin, GPIO_PIN_RESET);
+                __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed);
+            } else {
+                /* 右电机正转：通道A+通道B */
+                HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN3B_GPIO_Port, IN3B_Pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(IN4B_GPIO_Port, IN4B_Pin, GPIO_PIN_RESET);
+                __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, speed);
+            }
             break;
 
         case MOTOR_DIR_BACKWARD:
-            HAL_GPIO_WritePin(gpio_port, pin_fwd, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(gpio_port, pin_bwd, GPIO_PIN_SET);
+            if (motor == MOTOR_LEFT) {
+                /* 左电机反转：通道A+通道B */
+                HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(IN1B_GPIO_Port, IN1B_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN2B_GPIO_Port, IN2B_Pin, GPIO_PIN_SET);
+                __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed);
+            } else {
+                /* 右电机反转：通道A+通道B */
+                HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(IN3B_GPIO_Port, IN3B_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN4B_GPIO_Port, IN4B_Pin, GPIO_PIN_SET);
+                __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, speed);
+            }
             break;
 
         case MOTOR_DIR_STOP:
         default:
-            HAL_GPIO_WritePin(gpio_port, pin_fwd, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(gpio_port, pin_bwd, GPIO_PIN_RESET);
-            /* 停止时ENA/ENB设为0 */
             if (motor == MOTOR_LEFT) {
+                /* 左电机停止：通道A+通道B */
+                HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN1B_GPIO_Port, IN1B_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN2B_GPIO_Port, IN2B_Pin, GPIO_PIN_RESET);
                 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
             } else {
+                /* 右电机停止：通道A+通道B */
+                HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN3B_GPIO_Port, IN3B_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(IN4B_GPIO_Port, IN4B_Pin, GPIO_PIN_RESET);
                 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
             }
             break;
@@ -132,15 +156,23 @@ void Motor_Set(Motor_IdTypeDef motor, Motor_DirTypeDef dir, uint16_t speed)
 }
 
 /**
-  * @brief  停止所有电机
+  * @brief  停止所有电机（通道A+通道B）
   */
 void Motor_StopAll(void)
 {
-    /* 左电机停止 */
-    Motor_Set(MOTOR_LEFT, MOTOR_DIR_STOP, 0);
+    /* 左电机停止：通道A+通道B */
+    HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN1B_GPIO_Port, IN1B_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN2B_GPIO_Port, IN2B_Pin, GPIO_PIN_RESET);
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
 
-    /* 右电机停止 */
-    Motor_Set(MOTOR_RIGHT, MOTOR_DIR_STOP, 0);
+    /* 右电机停止：通道A+通道B */
+    HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN3B_GPIO_Port, IN3B_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(IN4B_GPIO_Port, IN4B_Pin, GPIO_PIN_RESET);
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
 }
 
 /**
