@@ -22,3 +22,8 @@ lanyaxc/MDK-ARM/RTE/
 
 # Claude 本地配置
 .claude/settings.local.json
+
+# Python 临时脚本
+create_*.py
+generate_*.py
+standard_*.py
